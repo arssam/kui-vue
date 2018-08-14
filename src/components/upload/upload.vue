@@ -20,7 +20,8 @@ export default {
     action: { type: String, required: true }, //url 要带/rest
     type: { type: String, default: "change" },
     data: { type: Object, default: () => { } },
-    disabled: Boolean
+    disabled: Boolean,
+    maxFileSize: [String, Number], // 上传文件最大限制，单位B
   },
   computed: {
     classes() {
@@ -57,9 +58,34 @@ export default {
       return false;
     },
     upload: function (e) {
+      if (this.maxFileSize) {
+        const fileSize = this.getSize(e.target)
+        if (fileSize === 0) {
+          this.$Message.warning('文件不能为空');
+          return
+        }
+        if (fileSize > this.maxFileSize) {
+          e.target.value = "";
+          this.$Message.warning(`上传的附件最大为${~~(this.maxFileSize / (1024 * 1024))}MB，上传失败`);
+          return
+        }
+      }
       this.file = e.target.value;
       this.file && this.$emit("change", this.file);
       this.type === "change" && this.file && this.submit();
+    },
+    getSize: function (obj) {
+      let size = 0;
+      const ua = window.navigator.userAgent; 
+      if (ua.indexOf("MSIE") > -1){
+        // ie9报错
+        var image = new Image();
+        image.dynsrc = obj.value;
+        size = image.fileSize;
+      } else {
+        size = obj.files[0].size;
+      }
+      return size
     },
     submit: function () {
       if (this.type !== "change" && this.type !== "wait") return false;
